@@ -260,7 +260,7 @@ def Noise_Rem():
 
 def Load_Data():
     print("Loading Mesh data")
-    mesh = o3d.io.read_triangle_mesh("cropped_mesh.stl")
+    mesh = o3d.io.read_triangle_mesh("mesh.stl")
     print("Mesh details: ", mesh)
     #print(np.asarray(mesh.vertices))    
     #o3d.io.write_triangle_mesh("copy_of_mesh.ply", mesh)
@@ -268,13 +268,14 @@ def Load_Data():
 
 
 def sampling_mesh():
-    print("Sampling the mesh Uniformly and with Poisson Disk Sampling")
+    num_sample=2*num_orig
+    print("Sampling the mesh Uniformly and with Poisson Disk Sampling with", num_sample, "points")
     #pcd_mesh = Mesh.sample_points_poisson_disk(number_of_points=777777, init_factor=3)   # Using init_factor method. Check documentation.
 
-    pcd_mesh = Mesh.sample_points_uniformly(number_of_points=1717809)
+    pcd_mesh = Mesh.sample_points_uniformly(number_of_points=num_sample)
     #o3d.visualization.draw_geometries([pcd_mesh])
 
-    pcd_mesh = Mesh.sample_points_poisson_disk(number_of_points=1717809, pcl=pcd_mesh)
+    pcd_mesh = Mesh.sample_points_poisson_disk(number_of_points=num_sample, pcl=pcd_mesh)
     #o3d.visualization.draw_geometries([pcd_mesh])
 
     return pcd_mesh
@@ -286,7 +287,7 @@ if __name__ == "__main__":
     # The primary key for both (original & post processing) list/vector/array must be maintained
     # To later retrieve the data from original files
     
-    #sampled = np.genfromtxt("mesh_sampled.txt", skip_header=1, dtype=str, delimiter=';') #Open3D File IO can also be used
+    #sampled = np.genfromtxt("sampled.txt", skip_header=1, dtype=str, delimiter=';') #Open3D File IO can also be used
     #sampled2d=sampled.astype(np.float32)
     #sampledxyz=sampled2d[:, [0, 1,2]]
     #print("Sampled Cloud no. of points are ", sampled.shape)
@@ -299,8 +300,9 @@ if __name__ == "__main__":
     # Data is loaded in to an NxM matrix using the delimiter arguments
     # ------------------------------------------------------------
     print("\nLoading Original Cloud")
-    original = np.genfromtxt("cropped_C2M_within.txt", skip_header=1, dtype=str, delimiter=';') #Open3D File IO can also be used
-    print("Original Cloud no. of points are ", original.shape)
+    original = np.genfromtxt("original.txt", skip_header=1, dtype=str, delimiter=';') #Open3D File IO can also be used
+    num_orig=original.shape[0]
+    print("Original Cloud no. of points are", num_orig)
 
 
     # Convert string matrix to int
@@ -322,7 +324,7 @@ if __name__ == "__main__":
     sampled_mesh=sampling_mesh()
     print("Sampled mesh details: ", sampled_mesh)
     
-    print("Printing sampled mesh points as numpy array: ", np.asarray(sampled_mesh.points))
+    #print("Printing sampled mesh points as numpy array: ", np.asarray(sampled_mesh.points))
     print("\nData Loaded")
 
     # Removing Noise from both Clouds
