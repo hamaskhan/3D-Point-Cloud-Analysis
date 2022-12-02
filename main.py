@@ -118,7 +118,7 @@ def Octree(originalxyz,sampledxyz):
     #o3d.visualization.draw([octree_o])    ---- This requires OpenGL 4.1 version minimum
 
     octree_s = o3d.geometry.Octree(max_depth=4)     # Octree for Sampled Data
-    octree_s.convert_from_point_cloud(pcd_s, size_expand=0.01)
+    octree_s.convert_from_point_cloud(sampled_mesh, size_expand=0.01)
 #    print("The Sampled Octree results are ", octree_s)
 
     print('\nDisplaying Octree of the Sampled cloud')
@@ -218,53 +218,115 @@ def Normals():
 
     normals_orig=np.asarray(pcd_o.normals)
 
-    print("\nComputing Normals of the Sampled cloud")
-    pcd_s.estimate_normals(
+    print("\nComputing Normals of the Sampled Mesh cloud")
+    sampled_mesh.estimate_normals(
     search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
     
+    #o3d.geometry.orient_normals_to_align_with_direction(
+    #sampled_mesh, orientation_reference=np.array([0., 0., 1.]))
+
+    # Added to Orient Normals Outwards of Geometry
+    sampled_mesh.orient_normals_to_align_with_direction(orientation_reference=np.array([0., 0., 1.]))
+
     print("\nDisplaying Normals of the Sampled cloud")
-    o3d.visualization.draw_geometries([pcd_s], point_show_normal=True)
+    o3d.visualization.draw_geometries([sampled_mesh], point_show_normal=True)
     #o3d.visualization.draw([[pcd_s], point_show_normal=True])    ---- This requires OpenGL 4.1 version minimum
 
     #print(np.asarray(pcd_s.normals)[:10, :])
 
     print("\nSaving Normals of the Sampled cloud")
     #o3d.io.write_point_cloud("sample_normals.pcd", pcd_s, write_ascii=True, compressed=False, print_progress=True)
-    sample_norms=np.asarray(pcd_s.normals)
+    sample_norms=np.asarray(sampled_mesh.normals)
 
     return normals_orig, sample_norms
 
+
+def display_inlier_outlier(cloud, ind):
+    inlier_cloud = cloud.voxel_down_sample(ind)
+    outlier_cloud = cloud.voxel_down_sample(ind, invert=True)
+
+    print("Showing outliers (red) and inliers (gray): ")
+    outlier_cloud.paint_uniform_color([1, 0, 0])
+    inlier_cloud.paint_uniform_color([0.8, 0.8, 0.8])
+    o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
+
+
+def Noise_Rem():
+    print("Statistical oulier removal")
+    cl, ind = pcd_o.remove_statistical_outlier(nb_neighbors=20,
+                                                    std_ratio=2.0)
+    #display_inlier_outlier(pcd_o, ind)
+
+
+def Load_Data():
+    print("Loading Mesh data")
+    mesh = o3d.io.read_triangle_mesh("cropped_mesh.stl")
+    print("Mesh details: ", mesh)
+    #print(np.asarray(mesh.vertices))    
+    #o3d.io.write_triangle_mesh("copy_of_mesh.ply", mesh)
+    return mesh
+
+
+def sampling_mesh():
+    print("Sampling the mesh Uniformly and with Poisson Disk Sampling")
+    #pcd_mesh = Mesh.sample_points_poisson_disk(number_of_points=777777, init_factor=3)   # Using init_factor method. Check documentation.
+
+    pcd_mesh = Mesh.sample_points_uniformly(number_of_points=1717809)
+    #o3d.visualization.draw_geometries([pcd_mesh])
+
+    pcd_mesh = Mesh.sample_points_poisson_disk(number_of_points=1717809, pcl=pcd_mesh)
+    #o3d.visualization.draw_geometries([pcd_mesh])
+
+    return pcd_mesh
+
+
 if __name__ == "__main__":
 
-    # Data loading and pre-processing
+    # Sampled Mesh data loaded directly from File 
     # The primary key for both (original & post processing) list/vector/array must be maintained
     # To later retrieve the data from original files
+    
+    #sampled = np.genfromtxt("mesh_sampled.txt", skip_header=1, dtype=str, delimiter=';') #Open3D File IO can also be used
+    #sampled2d=sampled.astype(np.float32)
+    #sampledxyz=sampled2d[:, [0, 1,2]]
+    #print("Sampled Cloud no. of points are ", sampled.shape)
+
+
+    # Loading Mesh file in .stl, .ply or other format
+    Mesh=Load_Data()
+
+
     # Data is loaded in to an NxM matrix using the delimiter arguments
     # ------------------------------------------------------------
-    print("\nLoading Original and Sampled Clouds")
-    original = np.genfromtxt("original.txt", skip_header=1, dtype=str, delimiter=';') #Open3D File IO can also be used
-    sampled = np.genfromtxt("sampled.txt", skip_header=1, dtype=str, delimiter=';') #Open3D File IO can also be used
+    print("\nLoading Original Cloud")
+    original = np.genfromtxt("cropped_C2M_within.txt", skip_header=1, dtype=str, delimiter=';') #Open3D File IO can also be used
     print("Original Cloud no. of points are ", original.shape)
-    print("Sampled Cloud no. of points are ", sampled.shape)
+
 
     # Convert string matrix to int
     original2d=original.astype(np.float32)
-    sampled2d=sampled.astype(np.float32)
-
     # Select first three columns for all rows to get only x, y,z data
     originalxyz=original2d[:, [0, 1,2]]
-    sampledxyz=sampled2d[:, [0, 1,2]]
 
 
-# Create Point Cloud as in https://github.com/isl-org/Open3D/blob/master/examples/python/geometry/point_cloud_with_numpy.py
+    # Create Point Cloud as in https://github.com/isl-org/Open3D/blob/master/examples/python/geometry/point_cloud_with_numpy.py
     pcd_o = o3d.geometry.PointCloud()      # Open3d PointCloud object of originalxyz data
     pcd_o.points = o3d.utility.Vector3dVector(originalxyz)
     pcd_o.paint_uniform_color([0, 0, 1])
 
-    pcd_s = o3d.geometry.PointCloud()      # Open3d PointCloud object of sampledxyz data
-    pcd_s.points = o3d.utility.Vector3dVector(sampledxyz)
-    pcd_s.paint_uniform_color([1, 0.706, 0])
+    # Create pcd_sampled object in case of Sampled Mesh data loaded directly from File
+    #pcd_s = o3d.geometry.PointCloud()      # Open3d PointCloud object of sampledxyz data
+    #pcd_s.points = o3d.utility.Vector3dVector(sampled_mesh)
+    #pcd_s.paint_uniform_color([1, 0.706, 0])
+
+    sampled_mesh=sampling_mesh()
+    print("Sampled mesh details: ", sampled_mesh)
+    
+    print("Printing sampled mesh points as numpy array: ", np.asarray(sampled_mesh.points))
     print("\nData Loaded")
+
+    # Removing Noise from both Clouds
+    #Noise_Rem()
 
     # Computing Point Normals
     normals_orig, sample_norms=Normals()
@@ -276,21 +338,21 @@ if __name__ == "__main__":
     # Initializing KD Tree and nearest neighbor return
     # ----------------------------------------------------------------------------
     print("\nInitializing KD Tree with Sample cloud as reference")
-    kdtree=KDTree(sampledxyz)
+    kdtree=KDTree(sampled_mesh.points)
 
     '''
-# --------------------------------------------------------------------------------
-# Below processing is without Octree Implementation-------------------------------
+    # --------------------------------------------------------------------------------
+    # Below processing is without Octree Implementation-------------------------------
     print("Starting Normal Angles Estimation And Outlier Removal WithOut Octree Data Structure")
     start_time = time.time()
 
     dist,points=kdtree.query(originalxyz,2)
-#    print("The distance for nearest 2 neighbors are ", dist)
+    #print("The distance for nearest 2 neighbors are ", dist)
     print("The nearest 2 neighbor point indices are ", points)
     nearest = sampledxyz[points]
     print("The nearest 2 neighbor points are ", nearest)
     theta=find_angles()
-#    print("Size of theta is", theta.size)
+    #print("Size of theta is", theta.size)
     final_no_oct=[]
 
     for t in range(0,theta.size):
@@ -303,16 +365,15 @@ if __name__ == "__main__":
     np.savetxt('final_no_oct.txt', np.around(final_no_oct,decimals=2), header='//X;Y;Z;Scalar Field;Nx;Ny;Nz', delimiter=';', fmt='%f', comments='')
     print("Final no. of points of final_no_oct: ", final_no_oct.shape)
     print("Execution time without Octrees: %s seconds" % (time.time() - start_time))
-
     '''
 
-# ---------------------------------------------------------------------------------------------
-# Below processing is with Octree Implementation-----------------------------------------------
+    # ---------------------------------------------------------------------------------------------
+    # Below processing is with Octree Implementation-----------------------------------------------
     print("\nStarting Normal Angles Estimation And Outlier Removal With Octree Data Structure")
     start_time = time.time()
     final=[]
     outliers=[]
-    Octree(originalxyz,sampledxyz)
+    Octree(originalxyz,sampled_mesh)
 
     final=np.array(final)
     outliers=np.array(outliers)
@@ -325,3 +386,4 @@ if __name__ == "__main__":
     print("Execution time with Octrees: %s seconds" % (time.time() - start_time))
 
     #plot_3D()
+
