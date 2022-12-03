@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import math as mth
 import open3d as o3d
 import time
+import os
 
 # Useful Resources, References, and Links------------------------------------------------------
 # PCL Libraries
@@ -258,16 +259,29 @@ def Noise_Rem():
     #display_inlier_outlier(pcd_o, ind)
 
 
-def Load_Data():
-    print("Loading Mesh data")
-    mesh = o3d.io.read_triangle_mesh("mesh.stl")
+def Load_Mesh():
+    print("Loading Mesh data. Checking mesh file format")
+
+    if os.path.exists("cropped_mesh.stl"):
+        print ("Mesh is .stl file.")
+        mesh = o3d.io.read_triangle_mesh("cropped_mesh.stl")
+    elif os.path.exists("cropped_mesh.ply"):
+        print ("Mesh is .ply file.")
+        mesh = o3d.io.read_triangle_mesh("cropped_mesh.ply")
+    elif os.path.exists("cropped_mesh.obj"):
+        print ("Mesh is .obj file.")
+        mesh = o3d.io.read_triangle_mesh("cropped_mesh.obj")
+    else:
+        print ("No mesh file found or is an unknown format.")
+
     print("Mesh details: ", mesh)
     #print(np.asarray(mesh.vertices))    
     #o3d.io.write_triangle_mesh("copy_of_mesh.ply", mesh)
     return mesh
 
 
-def sampling_mesh():
+
+def Sampling_Mesh():
     num_sample=2*num_orig
     print("Sampling the mesh Uniformly and with Poisson Disk Sampling with", num_sample, "points")
     #pcd_mesh = Mesh.sample_points_poisson_disk(number_of_points=777777, init_factor=3)   # Using init_factor method. Check documentation.
@@ -294,7 +308,7 @@ if __name__ == "__main__":
 
 
     # Loading Mesh file in .stl, .ply or other format
-    Mesh=Load_Data()
+    Mesh=Load_Mesh()
 
 
     # Data is loaded in to an NxM matrix using the delimiter arguments
@@ -321,7 +335,7 @@ if __name__ == "__main__":
     #pcd_s.points = o3d.utility.Vector3dVector(sampled_mesh)
     #pcd_s.paint_uniform_color([1, 0.706, 0])
 
-    sampled_mesh=sampling_mesh()
+    sampled_mesh=Sampling_Mesh()
     print("Sampled mesh details: ", sampled_mesh)
     
     #print("Printing sampled mesh points as numpy array: ", np.asarray(sampled_mesh.points))
