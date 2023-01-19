@@ -1,5 +1,5 @@
 # 3D-Point-Cloud-Analysis
-Hi, here I explore different methods for the analysis of various features in Point Cloud data
+Hi, here I explore different methods for the analysis of various features in Point Cloud data. Programmed an application for Airbus SE to detect micro wrinkles on airplane fuselage surfaces. Coded in Python. Used tools like Open3D libraries and CloudCompare
 
 
 Analysis of the Point Cloud Surface Normal data
